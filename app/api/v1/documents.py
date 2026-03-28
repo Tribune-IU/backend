@@ -66,6 +66,16 @@ async def chat_with_document(
     raw_text = doc.get("raw_text") or doc.get("summary") or ""
     context = raw_text[: settings.chat_max_context_chars]
 
+    user_profile = None
+    if body.user_id:
+        try:
+            from bson import ObjectId
+            u = await db[CollectionName.USERS].find_one({"_id": ObjectId(body.user_id)})
+            if u:
+                user_profile = u.get("parsed_profile") or None
+        except Exception:
+            pass
+
     session_id = str(uuid.uuid4())
     history_dicts = [{"role": m.role, "text": m.text} for m in body.history]
     reply = await trigger_document_qa_agent(
@@ -73,6 +83,7 @@ async def chat_with_document(
         document_context=context,
         question=body.message,
         history=history_dicts or None,
+        user_profile=user_profile,
     )
 
     return ChatResponse(reply=reply, context_chars_used=len(context))
@@ -96,12 +107,23 @@ async def draft_comment(
     summary = doc.get("summary") or doc.get("raw_text", "")[:1_000]
     session_id = str(uuid.uuid4())
 
+    user_profile = None
+    if body.user_id:
+        try:
+            from bson import ObjectId
+            u = await db[CollectionName.USERS].find_one({"_id": ObjectId(body.user_id)})
+            if u:
+                user_profile = u.get("parsed_profile") or None
+        except Exception:
+            pass
+
     history_dicts = [{"role": m.role, "text": m.text} for m in body.history]
     draft = await trigger_draft_comment_agent(
         session_id=session_id,
         document_summary=summary,
         conversation=history_dicts,
         resident_context=body.resident_context,
+        user_profile=user_profile,
     )
 
     return DraftCommentResponse(draft_comment=draft)

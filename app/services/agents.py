@@ -113,18 +113,20 @@ async def trigger_monitor_agent(title: str, source: str, document_text: str) -> 
     await call_adk_agent_fire_and_forget("monitor_agent", prompt)
 
 
+def _profile_block(user_profile: dict | None) -> str:
+    if not user_profile:
+        return ""
+    lines = [f"{k}: {', '.join(v)}" for k, v in user_profile.items() if v]
+    return ("--- RESIDENT PROFILE ---\n" + "\n".join(lines) + "\n\n") if lines else ""
+
+
 async def trigger_document_qa_agent(
     session_id: str,
     document_context: str,
     question: str,
     history: list[dict] | None = None,
+    user_profile: dict | None = None,
 ) -> str:
-    """Call document_qa_agent and return its answer directly via SSE streaming.
-
-    The `session_id` parameter is kept in the signature so the documents API
-    can use it in the reply_store if desired, but this implementation returns
-    the text inline.
-    """
     history_block = ""
     if history:
         lines = []
@@ -135,6 +137,7 @@ async def trigger_document_qa_agent(
 
     prompt = (
         f"--- DOCUMENT CONTEXT ---\n{document_context}\n\n"
+        + _profile_block(user_profile)
         + history_block
         + f"--- RESIDENT QUESTION ---\n{question}\n\n"
         "Answer the question using only the document context above."
@@ -147,6 +150,7 @@ async def trigger_draft_comment_agent(
     document_summary: str,
     conversation: list[dict],
     resident_context: str = "",
+    user_profile: dict | None = None,
 ) -> str:
     """Call draft_comment_agent and return the drafted letter via the reply store.
 
@@ -165,7 +169,8 @@ async def trigger_draft_comment_agent(
     prompt = (
         f"Session ID: {session_id}\n\n"
         f"--- DOCUMENT SUMMARY ---\n{document_summary}\n\n"
-        f"--- CONVERSATION TRANSCRIPT ---\n{transcript}\n\n"
+        + _profile_block(user_profile)
+        + f"--- CONVERSATION TRANSCRIPT ---\n{transcript}\n\n"
         + (f"--- RESIDENT CONTEXT ---\n{resident_context}\n\n" if resident_context else "")
         + "Draft a public comment letter based on the above, then call submit_draft_comment."
     )

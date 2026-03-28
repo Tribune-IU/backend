@@ -7,7 +7,7 @@ from app.api.validation import parse_object_id
 from app.db.collections import CollectionName
 from app.db.mongo_utils import mongo_doc_to_response
 from app.models.user import UserDocument
-from app.schemas.v1 import AlertResource, CreateUserBody, CreateUserResponse, GetUserResponse, ListAlertsResponse, UserResource
+from app.schemas.v1 import AlertResource, CreateUserBody, CreateUserResponse, GetUserResponse, ListAlertsResponse, SubmitBioBody, UserResource
 from app.services.agents import trigger_profile_agent
 from app.services.coalition_matcher import find_users_for_document
 
@@ -33,6 +33,19 @@ async def create_user(body: CreateUserBody, db: DbDep, background_tasks: Backgro
     
     res = mongo_doc_to_response(created)
     return CreateUserResponse(user=UserResource.model_validate(res))
+
+
+@router.post("/{user_id}/bio", response_model=GetUserResponse)
+async def submit_bio(user_id: str, body: SubmitBioBody, db: DbDep, background_tasks: BackgroundTasks) -> GetUserResponse:
+    """Attach a bio to a pre-created user and trigger profile parsing."""
+    oid = parse_object_id(user_id, field="user_id")
+    user = await db[CollectionName.USERS].find_one({"_id": oid})
+    if user is None:
+        raise ApiError(http_status=404, status="NOT_FOUND", message="User not found.")
+    await db[CollectionName.USERS].update_one({"_id": oid}, {"$set": {"bio": body.bio.strip()}})
+    background_tasks.add_task(trigger_profile_agent, user_id, body.bio)
+    updated = await db[CollectionName.USERS].find_one({"_id": oid})
+    return GetUserResponse(user=UserResource.model_validate(mongo_doc_to_response(updated)))
 
 
 @router.get("/{user_id}", response_model=GetUserResponse)

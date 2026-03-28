@@ -3,7 +3,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.user import TagDict
 
 
+class AuthResponse(BaseModel):
+    user_id: str
+
+
 class CreateUserBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    bio: str = Field(..., min_length=1, max_length=50_000)
+
+
+class SubmitBioBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     bio: str = Field(..., min_length=1, max_length=50_000)
@@ -67,6 +77,10 @@ class ChatBody(BaseModel):
         default_factory=list,
         description="Prior turns so the agent can follow the thread.",
     )
+    user_id: str | None = Field(
+        default=None,
+        description="If provided, the resident's parsed profile is injected as context.",
+    )
 
 
 class ChatResponse(BaseModel):
@@ -84,6 +98,10 @@ class DraftCommentBody(BaseModel):
     resident_context: str = Field(
         default="",
         description="Optional freeform resident context (neighborhood, role, etc.).",
+    )
+    user_id: str | None = Field(
+        default=None,
+        description="If provided, the resident's parsed profile is injected as context.",
     )
 
 
