@@ -1,7 +1,7 @@
 [project]
-name = "backend"
+name = "tribune-backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "Tribune API backend built with FastAPI and MongoDB"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
