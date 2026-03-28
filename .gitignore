@@ -1,0 +1,7 @@
+.venv
+
+.env
+.vault.key
+
+
+__pycache__/
