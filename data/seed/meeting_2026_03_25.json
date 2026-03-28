@@ -1,0 +1,57 @@
+{
+  "resolution_2026_05": {
+    "status": "open_for_comment",
+    "title": "A Resolution to Initiate a Proposal to Amend Title 20 (Unified Development Ordinance) of the Bloomington Municipal Code in order to Improve Sustainability and Housing Affordability",
+    "source": "Bloomington Common Council",
+    "url": "",
+    "date_filed": "2026-03-20",
+    "ai_tags": {
+      "topics": [
+        "Urban Planning",
+        "Zoning",
+        "Housing Affordability",
+        "Sustainable Development",
+        "Climate Action",
+        "Parking Reform"
+      ],
+      "impact_radius": "citywide",
+      "affected_groups": [
+        "Residents",
+        "Homebuyers",
+        "Developers",
+        "Low-income households"
+      ]
+    },
+    "document_id": "Resolution 2026-05",
+    "summary": "This resolution initiates a process to amend Title 20 of Bloomington's Unified Development Ordinance (UDO) to improve sustainability and housing affordability. It directs the Plan Commission to propose amendments that reduce minimum lot widths and areas in residential zones, add electrification requirements for sustainable development incentives, and eliminate minimum parking requirements citywide. The goal is to align development standards with historical patterns, reduce climate pollution, and facilitate more affordable and diverse housing options.",
+    "hearing_date": "2026-03-25"
+  },
+  "resolution_2026_06_affordability": {
+    "hearing_date": "2026-03-25",
+    "document_id": "Resolution 2026-06",
+    "source": "Bloomington Common Council",
+    "summary": "This resolution directs the Housing and Neighborhood Development Department (HAND) to develop a framework for incentivizing and ensuring long-term affordability of housing units in Bloomington. The framework will evaluate tools like silent second mortgages, shared equity models, and rights-of-first-refusal to protect public investment and preserve affordable housing over time. It aims to establish clear standards for affordability duration, eligibility, resale procedures, and enforcement, ultimately promoting homeownership and economic mobility for residents of all income levels.",
+    "title": "A Resolution Directing the Housing and Neighborhood Development Department to Develop a Framework for Long-Term Housing Affordability",
+    "url": "",
+    "status": "open_for_comment",
+    "date_filed": "2026-03-25",
+    "ai_tags": {
+      "impact_radius": "citywide",
+      "topics": [
+        "Housing Affordability",
+        "Housing Policy",
+        "Community Development",
+        "Public Investment",
+        "Economic Mobility",
+        "Homeownership"
+      ],
+      "affected_groups": [
+        "Residents",
+        "Developers",
+        "Homeowners",
+        "Low-income households",
+        "All income levels"
+      ]
+    }
+  }
+}

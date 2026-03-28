@@ -1,0 +1,16 @@
+from pydantic import Field
+
+from app.models.base import MongoDocumentBase
+from app.models.user import TagDict
+
+
+class DocumentRecord(MongoDocumentBase):
+    """`documents` collection: ingested council materials and extracted tag metadata."""
+
+    title: str = Field(..., min_length=1)
+    source: str = Field(..., min_length=1, description="Origin label or URL for the filing.")
+    raw_text: str = Field(..., description="Full text used for retrieval and chat.")
+    ai_tags: TagDict = Field(
+        default_factory=dict,
+        description="Dictionary of tags by category, typically produced by the AI pipeline.",
+    )
