@@ -43,19 +43,15 @@ async def call_adk_agent(app_name: str, message: str) -> None:
 
 
 async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: float = 90.0) -> str:
-    """Call an ADK agent via /run_sse and stream the reply back directly.
+    """Call an ADK agent via /run and return the model's text reply.
 
-    Collects all text parts emitted by the agent and returns them joined as a
-    single string.  This avoids the webhook roundtrip pattern that depends on
-    the model reliably calling a specific tool.
-
-    Returns the concatenated agent text or raises ApiError on failure/timeout.
+    Uses the synchronous /run endpoint which returns all events as a JSON list.
+    Collects the last model text part and returns it.
     """
     session_id = str(uuid.uuid4())
     user_id = "system"
 
     async with httpx.AsyncClient(timeout=timeout + 10) as client:
-        # Create session
         session_url = f"{ADK_SERVER_URL}/apps/{app_name}/users/{user_id}/sessions"
         try:
             sr = await client.post(session_url, json={"sessionId": session_id})
@@ -70,50 +66,26 @@ async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: flo
             "newMessage": {"role": "user", "parts": [{"text": message}]},
         }
 
-        text_parts: list[str] = []
         try:
-            async with client.stream(
-                "POST",
-                f"{ADK_SERVER_URL}/run_sse",
-                json=payload,
-                timeout=timeout,
-            ) as resp:
-                resp.raise_for_status()
-                async for line in resp.aiter_lines():
-                    if not line.startswith("data:"):
-                        continue
-                    data_str = line[5:].strip()
-                    if not data_str:
-                        continue
-                    try:
-                        obj = json.loads(data_str)
-                    except json.JSONDecodeError:
-                        continue
-
-                    if obj.get("error"):
-                        raise ApiError(
-                            http_status=502,
-                            status="UNAVAILABLE",
-                            message=f"ADK agent error: {obj['error']}",
-                        )
-
-                    # Collect model text parts (role == "model")
-                    content = obj.get("content", {})
-                    if content.get("role") == "model":
-                        for part in content.get("parts", []):
-                            if "text" in part and part["text"].strip():
-                                text_parts.append(part["text"].strip())
-
+            resp = await client.post(f"{ADK_SERVER_URL}/run", json=payload, timeout=timeout)
+            resp.raise_for_status()
+            events = resp.json()
         except httpx.TimeoutException:
             raise ApiError(
                 http_status=504,
                 status="DEADLINE_EXCEEDED",
                 message=f"Agent '{app_name}' did not respond within {timeout:.0f}s.",
             )
-        except ApiError:
-            raise
         except Exception as e:
-            raise ApiError(http_status=502, status="UNAVAILABLE", message=f"ADK stream error: {e}")
+            raise ApiError(http_status=502, status="UNAVAILABLE", message=f"ADK run error: {e}")
+
+    text_parts: list[str] = []
+    for event in events:
+        content = event.get("content", {})
+        if content.get("role") == "model":
+            for part in content.get("parts", []):
+                if "text" in part and part["text"].strip():
+                    text_parts.append(part["text"].strip())
 
     if not text_parts:
         raise ApiError(
@@ -176,7 +148,14 @@ async def trigger_draft_comment_agent(
     conversation: list[dict],
     resident_context: str = "",
 ) -> str:
-    """Call draft_comment_agent and return the drafted letter directly via SSE streaming."""
+    """Call draft_comment_agent and return the drafted letter via the reply store.
+
+    The agent calls submit_draft_comment(session_id, draft) which POSTs back to
+    /v1/system:saveDraftComment. That webhook sets draft_comment_store so we can
+    retrieve the actual draft text here.
+    """
+    from app.services.reply_store import draft_comment_store
+
     transcript_lines = []
     for turn in conversation:
         role = "Resident" if turn.get("role") == "user" else "Assistant"
@@ -184,9 +163,21 @@ async def trigger_draft_comment_agent(
     transcript = "\n".join(transcript_lines) or "(no prior conversation)"
 
     prompt = (
+        f"Session ID: {session_id}\n\n"
         f"--- DOCUMENT SUMMARY ---\n{document_summary}\n\n"
         f"--- CONVERSATION TRANSCRIPT ---\n{transcript}\n\n"
         + (f"--- RESIDENT CONTEXT ---\n{resident_context}\n\n" if resident_context else "")
-        + "Draft a public comment letter based on the above."
+        + "Draft a public comment letter based on the above, then call submit_draft_comment."
     )
-    return await call_adk_agent_and_get_reply("draft_comment_agent", prompt)
+
+    # /run is synchronous — by the time it returns the tool has already POSTed to the webhook
+    await call_adk_agent_and_get_reply("draft_comment_agent", prompt)
+
+    draft = await draft_comment_store.wait(session_id, timeout_secs=5.0)
+    if not draft:
+        raise ApiError(
+            http_status=502,
+            status="UNAVAILABLE",
+            message="draft_comment_agent did not submit a draft.",
+        )
+    return draft
