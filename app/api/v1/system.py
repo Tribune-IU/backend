@@ -8,6 +8,7 @@ from app.api.deps import DbDep
 from app.schemas.v1 import TriggerMonitorResponse
 from app.schemas.v1_system import SaveProfileBody, SaveDocumentBody
 from app.services.monitor_stub import trigger_monitor_stub
+from app.services.reply_store import qa_reply_store, draft_comment_store
 
 router = APIRouter(tags=["system"])
 
@@ -98,3 +99,33 @@ async def save_document(body: SaveDocumentBody, db: DbDep) -> dict:
                 )
             
     return {"status": "success"}
+
+
+# ---------------------------------------------------------------------------
+# Agent webhook receivers
+# These are called BY the ADK agents, not by end-users.
+# ---------------------------------------------------------------------------
+
+class SaveQaReplyBody(BaseModel):
+    session_id: str
+    reply: str
+
+
+class SaveDraftCommentBody(BaseModel):
+    session_id: str
+    draft_comment: str
+
+
+@router.post("/system:saveQaReply")
+async def save_qa_reply(body: SaveQaReplyBody) -> dict:
+    """Receive an answer from document_qa_agent and unblock the waiting chat handler."""
+    await qa_reply_store.set(body.session_id, body.reply)
+    return {"status": "ok"}
+
+
+@router.post("/system:saveDraftComment")
+async def save_draft_comment(body: SaveDraftCommentBody) -> dict:
+    """Receive a draft letter from draft_comment_agent and unblock the waiting draft handler."""
+    await draft_comment_store.set(body.session_id, body.draft_comment)
+    return {"status": "ok"}
+

@@ -26,11 +26,25 @@ class GetUserResponse(BaseModel):
 
 
 class DocumentListItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     id: str
     title: str
     source: str
+    summary: str = ""
+    ai_tags: TagDict
+
+
+class DocumentDetail(BaseModel):
+    """Full document, including raw_text, returned by GET /documents/{doc_id}."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str
+    source: str
+    summary: str = ""
+    raw_text: str = ""
     ai_tags: TagDict
 
 
@@ -38,15 +52,43 @@ class ListDocumentsResponse(BaseModel):
     documents: list[DocumentListItem]
 
 
+class ChatMessage(BaseModel):
+    """A single turn in the conversation history."""
+
+    role: str = Field(..., description="'user' or 'assistant'")
+    text: str
+
+
 class ChatBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(..., min_length=1)
+    history: list[ChatMessage] = Field(
+        default_factory=list,
+        description="Prior turns so the agent can follow the thread.",
+    )
 
 
 class ChatResponse(BaseModel):
     reply: str
     context_chars_used: int
+
+
+class DraftCommentBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    history: list[ChatMessage] = Field(
+        default_factory=list,
+        description="Full Q&A conversation that shaped the resident's views.",
+    )
+    resident_context: str = Field(
+        default="",
+        description="Optional freeform resident context (neighborhood, role, etc.).",
+    )
+
+
+class DraftCommentResponse(BaseModel):
+    draft_comment: str
 
 
 class AlertResource(BaseModel):
@@ -58,6 +100,7 @@ class AlertResource(BaseModel):
     ai_summary: str
     ai_draft_comment: str
     is_active: bool = True
+    coalition_count: int = 0
 
 
 class ListAlertsResponse(BaseModel):

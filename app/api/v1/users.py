@@ -1,3 +1,4 @@
+from bson import ObjectId
 from fastapi import APIRouter, BackgroundTasks
 
 from app.api.deps import DbDep
@@ -8,6 +9,7 @@ from app.db.mongo_utils import mongo_doc_to_response
 from app.models.user import UserDocument
 from app.schemas.v1 import AlertResource, CreateUserBody, CreateUserResponse, GetUserResponse, ListAlertsResponse, UserResource
 from app.services.agents import trigger_profile_agent
+from app.services.coalition_matcher import find_users_for_document
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -51,8 +53,23 @@ async def list_user_alerts(user_id: str, db: DbDep) -> ListAlertsResponse:
         raise ApiError(http_status=404, status="NOT_FOUND", message="User not found.")
 
     cursor = db[CollectionName.ALERTS].find({"user_id": user_id, "is_active": True}).sort("_id", -1)
+    raw_alerts = [raw async for raw in cursor]
+
+    # Batch-fetch documents and compute coalition count once per unique document_id
+    unique_doc_ids = {a["document_id"] for a in raw_alerts if "document_id" in a}
+    coalition_counts: dict[str, int] = {}
+    for doc_id_str in unique_doc_ids:
+        try:
+            doc = await db[CollectionName.DOCUMENTS].find_one({"_id": ObjectId(doc_id_str)})
+        except Exception:
+            doc = None
+        if doc:
+            matched = await find_users_for_document(db, document=doc)
+            coalition_counts[doc_id_str] = len(matched)
+
     alerts: list[AlertResource] = []
-    async for raw in cursor:
+    for raw in raw_alerts:
         data = mongo_doc_to_response(raw)
+        data["coalition_count"] = coalition_counts.get(data.get("document_id", ""), 0)
         alerts.append(AlertResource.model_validate(data))
     return ListAlertsResponse(alerts=alerts)
