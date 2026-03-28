@@ -21,6 +21,10 @@ class CreateUserResponse(BaseModel):
     user: UserResource
 
 
+class GetUserResponse(BaseModel):
+    user: UserResource
+
+
 class DocumentListItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

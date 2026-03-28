@@ -35,14 +35,21 @@ def build_users_matching_tags_pipeline(document_tag_list: list[str]) -> list[dic
     Pipeline stages: compute per-user flattened tags, keep users with non-empty
     intersection against ``document_tag_list``.
     """
+    lower_doc_tags = [str(t).lower() for t in document_tag_list]
     return [
         {
             "$addFields": {
                 "user_tag_list": {
-                    "$reduce": {
-                        "input": {"$objectToArray": {"$ifNull": ["$parsed_profile", {}]}},
-                        "initialValue": [],
-                        "in": {"$concatArrays": ["$$value", "$$this.v"]},
+                    "$map": {
+                        "input": {
+                            "$reduce": {
+                                "input": {"$objectToArray": {"$ifNull": ["$parsed_profile", {}]}},
+                                "initialValue": [],
+                                "in": {"$concatArrays": ["$$value", "$$this.v"]},
+                            }
+                        },
+                        "as": "tag",
+                        "in": {"$toLower": "$$tag"}
                     }
                 }
             }
@@ -51,7 +58,7 @@ def build_users_matching_tags_pipeline(document_tag_list: list[str]) -> list[dic
             "$match": {
                 "$expr": {
                     "$gt": [
-                        {"$size": {"$setIntersection": ["$user_tag_list", document_tag_list]}},
+                        {"$size": {"$setIntersection": ["$user_tag_list", lower_doc_tags]}},
                         0,
                     ]
                 }
@@ -67,17 +74,27 @@ async def find_users_matching_document_tags(
     document_tags: TagDict,
 ) -> list[dict[str, Any]]:
     """
-    Return raw user documents whose flattened ``parsed_profile`` tags intersect
-    any tag from ``document_tags`` (e.g. a document's ``ai_tags``).
+    Return raw user documents whose flattened parsed_profile tags generously intersect
+    any tag from document_tags (e.g. substring match) to accommodate unstructured seed data.
     """
-    tag_list = flatten_tag_dict(document_tags)
-    if not tag_list:
+    doc_tag_list = flatten_tag_dict(document_tags)
+    if not doc_tag_list:
         return []
 
+    from app.services.tag_utils import check_tags_overlap
+
     coll = db[CollectionName.USERS]
-    pipeline = build_users_matching_tags_pipeline(tag_list)
-    cursor = coll.aggregate(pipeline)
-    return [doc async for doc in cursor]
+    cursor = coll.find({"parsed_profile": {"$exists": True}})
+    
+    matched_users = []
+    async for u in cursor:
+        profile = u.get("parsed_profile", {})
+        user_tag_list = flatten_tag_dict(profile)
+        
+        if check_tags_overlap(user_tag_list, doc_tag_list):
+            matched_users.append(u)
+            
+    return matched_users
 
 
 async def find_users_for_document(
