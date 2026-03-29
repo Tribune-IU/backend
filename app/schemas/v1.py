@@ -51,6 +51,7 @@ class DocumentListItem(BaseModel):
     title: str
     source: str
     summary: str = ""
+    hearing_date: str = ""
     ai_tags: TagDict
 
 

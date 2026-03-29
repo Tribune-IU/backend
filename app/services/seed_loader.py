@@ -59,7 +59,8 @@ def _rows_to_ops(rows: list[dict[str, Any]], *, filename: str) -> list[UpdateOne
             "source": row.get("source", "unknown"),
             "raw_text": raw_text,
             "summary": row.get("summary", ""),
-            "ai_tags": cleaned_tags
+            "ai_tags": cleaned_tags,
+            "hearing_date": row.get("hearing_date", ""),
         }
             
         doc = DocumentRecord.model_validate(cleaned_row)

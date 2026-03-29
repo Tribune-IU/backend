@@ -15,3 +15,4 @@ class DocumentRecord(MongoDocumentBase):
         default_factory=dict,
         description="Dictionary of tags by category, typically produced by the AI pipeline.",
     )
+    hearing_date: str = Field(default="", description="ISO date string of the scheduled council hearing.")
