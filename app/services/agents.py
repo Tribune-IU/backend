@@ -4,10 +4,13 @@ import json
 
 import httpx
 from app.api.errors import ApiError
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-ADK_SERVER_URL = "http://127.0.0.1:8080"
+
+def _agents_base_url() -> str:
+    return settings.agents_base_url.rstrip("/")
 
 
 async def call_adk_agent_fire_and_forget(app_name: str, message: str) -> None:
@@ -19,7 +22,8 @@ async def call_adk_agent_fire_and_forget(app_name: str, message: str) -> None:
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
-            session_url = f"{ADK_SERVER_URL}/apps/{app_name}/users/{user_id}/sessions"
+            base = _agents_base_url()
+            session_url = f"{base}/apps/{app_name}/users/{user_id}/sessions"
             logger.info("ADK   %s  creating session  session=%s", app_name, session_id)
             session_resp = await client.post(session_url, json={"sessionId": session_id})
             session_resp.raise_for_status()
@@ -31,7 +35,7 @@ async def call_adk_agent_fire_and_forget(app_name: str, message: str) -> None:
                 "newMessage": {"role": "user", "parts": [{"text": message}]},
             }
             logger.info("ADK   %s  POST /run  session=%s  prompt_len=%d", app_name, session_id, len(message))
-            response = await client.post(f"{ADK_SERVER_URL}/run", json=payload)
+            response = await client.post(f"{base}/run", json=payload)
             response.raise_for_status()
             logger.info("ADK   %s  /run complete  session=%s", app_name, session_id)
     except Exception as e:
@@ -53,8 +57,9 @@ async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: flo
     session_id = str(uuid.uuid4())
     user_id = "system"
 
+    base = _agents_base_url()
     async with httpx.AsyncClient(timeout=timeout + 10) as client:
-        session_url = f"{ADK_SERVER_URL}/apps/{app_name}/users/{user_id}/sessions"
+        session_url = f"{base}/apps/{app_name}/users/{user_id}/sessions"
         logger.info("ADK   %s  creating session  session=%s", app_name, session_id)
         try:
             sr = await client.post(session_url, json={"sessionId": session_id})
@@ -72,7 +77,7 @@ async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: flo
 
         logger.info("ADK   %s  POST /run  session=%s  prompt_len=%d  timeout=%.0fs", app_name, session_id, len(message), timeout)
         try:
-            resp = await client.post(f"{ADK_SERVER_URL}/run", json=payload, timeout=timeout)
+            resp = await client.post(f"{base}/run", json=payload, timeout=timeout)
             resp.raise_for_status()
             events = resp.json()
         except httpx.TimeoutException:
