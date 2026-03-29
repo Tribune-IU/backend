@@ -27,3 +27,21 @@ class AlertDocument(MongoDocumentBase):
         default=True,
         description="False when the user dismisses or the alert is superseded.",
     )
+
+    # User-session state persisted across visits
+    why_it_affects_me: str = Field(
+        default="",
+        description="Cached AI explanation of personal relevance (generated once, never regenerated).",
+    )
+    chat_history: list[dict[str, str]] = Field(
+        default_factory=list,
+        description="Saved Q&A conversation turns [{role, text}, ...].",
+    )
+    draft_comment: str = Field(
+        default="",
+        description="Latest saved public-comment draft.",
+    )
+    draft_snapshot_length: int = Field(
+        default=0,
+        description="chat_history length at the time draft_comment was last saved.",
+    )

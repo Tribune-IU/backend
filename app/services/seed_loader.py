@@ -54,19 +54,24 @@ def _rows_to_ops(rows: list[dict[str, Any]], *, filename: str) -> list[UpdateOne
                 cleaned_tags[k] = []
         
         # Only preserve fields that the DocumentRecord strictly expects to bypass extra_forbidden
+        document_id = row.get("document_id", "").strip()
         cleaned_row = {
             "title": row.get("title", "Untitled"),
             "source": row.get("source", "unknown"),
+            "document_id": document_id,
             "raw_text": raw_text,
             "summary": row.get("summary", ""),
             "ai_tags": cleaned_tags,
             "hearing_date": row.get("hearing_date", ""),
+            "pdf_url": row.get("pdf_url", ""),
         }
-            
+
         doc = DocumentRecord.model_validate(cleaned_row)
         payload = doc.model_dump(by_alias=True, exclude_none=True, exclude={"id"})
         payload.pop("_id", None)
-        ops.append(UpdateOne({"source": payload["source"]}, {"$set": payload}, upsert=True))
+        # Use document_id as the unique key when available, fall back to title
+        upsert_filter = {"document_id": document_id} if document_id else {"title": payload["title"]}
+        ops.append(UpdateOne(upsert_filter, {"$set": payload}, upsert=True))
     return ops
 
 

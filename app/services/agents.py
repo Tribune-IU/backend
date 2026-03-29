@@ -155,6 +155,27 @@ async def trigger_document_qa_agent(
     return await call_adk_agent_and_get_reply("document_qa_agent", prompt)
 
 
+async def trigger_relevance_agent(
+    document_title: str,
+    document_summary: str,
+    user_profile: dict | None,
+) -> str:
+    """Ask the document_qa_agent to explain in <100 words why this document matters to this resident."""
+    if not user_profile:
+        raise ApiError(http_status=400, status="INVALID_ARGUMENT", message="No user profile available to assess relevance.")
+    profile_block = _profile_block(user_profile)
+    prompt = (
+        f"--- DOCUMENT ---\n"
+        f"Title: {document_title}\n"
+        f"Summary: {document_summary}\n\n"
+        + profile_block
+        + "In one paragraph of fewer than 100 words, explain specifically why this city council item "
+        "is relevant to this resident given their profile. Be direct and personal. "
+        "Focus on the resident's stake, not a general summary of the document."
+    )
+    return await call_adk_agent_and_get_reply("document_qa_agent", prompt)
+
+
 async def trigger_draft_comment_agent(
     session_id: str,
     document_summary: str,

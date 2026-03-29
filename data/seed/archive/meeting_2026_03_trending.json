@@ -1,0 +1,80 @@
+{
+  "resolution_2026_07_fleet": {
+    "document_id": "Resolution 2026-07",
+    "title": "A Resolution Authorizing the Purchase of Fourteen Electric Fleet Vehicles and Associated Charging Infrastructure for City Operations",
+    "source": "Bloomington Common Council",
+    "summary": "This resolution authorizes the City of Bloomington to purchase fourteen battery-electric vehicles for use by the Public Works, Fleet Services, and Parks departments, along with the installation of Level 2 and DC fast-charging stations at two municipal facilities. The procurement is funded through a combination of federal Inflation Reduction Act fleet electrification grants and city capital reserves. The contract is awarded to a regional dealer consortium following a competitive bid process. Full deployment is expected by Q3 2026, reducing annual fuel expenditures and fleet emissions.",
+    "hearing_date": "2026-03-04",
+    "date_filed": "2026-02-14",
+    "status": "open_for_comment",
+    "ai_tags": {
+      "topics": [
+        "Fleet Management",
+        "Electric Vehicles",
+        "Procurement",
+        "Municipal Operations",
+        "Fiscal Policy"
+      ],
+      "impact_radius": "Municipal Operations",
+      "affected_groups": [
+        "City Employees",
+        "Taxpayers",
+        "Fleet Contractors",
+        "Municipal Workforce"
+      ]
+    }
+  },
+  "resolution_2026_08_convention": {
+    "document_id": "Resolution 2026-08",
+    "title": "A Resolution Authorizing the City to Engage a Consultant to Conduct a Feasibility Study for the Expansion of the Monroe Convention Center",
+    "source": "Bloomington Common Council",
+    "summary": "This resolution authorizes the Department of Economic and Sustainable Development to contract with a hospitality consulting firm to conduct a full feasibility study for expanding the Monroe Convention Center by approximately 18,000 square feet of flexible event and meeting space. The study will assess market demand, projected occupancy rates, financing structures including potential hotel tax bond financing, and economic impact on downtown Bloomington. Results are expected within six months and will inform a future capital referendum. The expansion is intended to attract regional conferences and reduce reliance on off-site overflow venues.",
+    "hearing_date": "2026-03-04",
+    "date_filed": "2026-02-18",
+    "status": "open_for_comment",
+    "ai_tags": {
+      "topics": [
+        "Economic Development",
+        "Tourism",
+        "Convention Center",
+        "Hospitality Industry",
+        "Public Finance",
+        "Downtown Revitalization"
+      ],
+      "impact_radius": "Downtown Core",
+      "affected_groups": [
+        "Hotel Operators",
+        "Event Organizers",
+        "Downtown Businesses",
+        "Tourism Industry",
+        "Conference Attendees"
+      ]
+    }
+  },
+  "ordinance_2026_09_solid_waste": {
+    "document_id": "Ordinance 2026-09",
+    "title": "An Ordinance Amending Title 12 of the Bloomington Municipal Code to Establish Updated Commercial Solid Waste Hauler Licensing Standards and Fee Schedule",
+    "source": "Bloomington City Council",
+    "summary": "This ordinance updates the licensing requirements for commercial solid waste and recycling haulers operating within city limits. Key changes include mandatory route reporting via GPS tracking, increased minimum insurance coverage thresholds, a new graduated annual licensing fee tied to fleet size, and penalties for non-compliant disposal at unapproved transfer stations. The ordinance also creates a preference tier for haulers meeting certified recycling diversion benchmarks. The amendments are intended to improve waste diversion accountability, reduce illegal dumping incidents in commercial corridors, and align Bloomington's hauler standards with Monroe County solid waste district guidelines.",
+    "hearing_date": "2026-03-25",
+    "date_filed": "2026-03-10",
+    "status": "open_for_comment",
+    "ai_tags": {
+      "topics": [
+        "Waste Management",
+        "Commercial Licensing",
+        "Public Health",
+        "Environmental Compliance",
+        "Sanitation",
+        "Municipal Code"
+      ],
+      "impact_radius": "Commercial Districts",
+      "affected_groups": [
+        "Waste Haulers",
+        "Commercial Property Owners",
+        "Business Operators",
+        "Recycling Contractors"
+      ]
+    }
+  }
+}

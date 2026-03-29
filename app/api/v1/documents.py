@@ -19,8 +19,11 @@ from app.schemas.v1 import (
     DraftCommentBody,
     DraftCommentResponse,
     ListDocumentsResponse,
+    RelevanceBody,
+    RelevanceResponse,
+    SaveProgressBody,
 )
-from app.services.agents import trigger_document_qa_agent, trigger_draft_comment_agent
+from app.services.agents import trigger_document_qa_agent, trigger_draft_comment_agent, trigger_relevance_agent
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -148,3 +151,95 @@ async def draft_comment(
 
     logger.info("DOCS  draft  doc_id=%s  session=%s  draft_len=%d", doc_id, session_id, len(draft))
     return DraftCommentResponse(draft_comment=draft)
+
+
+@router.post("/{doc_id}/relevance", response_model=RelevanceResponse)
+async def get_relevance(
+    doc_id: str,
+    body: RelevanceBody,
+    db: DbDep,
+) -> RelevanceResponse:
+    """Return a personalised <100-word explanation of why this document affects this resident.
+
+    The result is cached in the alert document on first generation and never regenerated.
+    """
+    from bson import ObjectId
+
+    oid = parse_object_id(doc_id, field="doc_id")
+    doc = await db[CollectionName.DOCUMENTS].find_one({"_id": oid})
+    if doc is None:
+        raise ApiError(http_status=404, status="NOT_FOUND", message="Document not found.")
+
+    # Check alert cache first — only generate once per user+document
+    alert = await db[CollectionName.ALERTS].find_one(
+        {"user_id": body.user_id, "document_id": doc_id}
+    )
+    if alert and alert.get("why_it_affects_me"):
+        cached = alert["why_it_affects_me"]
+        logger.info("DOCS  relevance  doc_id=%s  user_id=%s  cached=True  len=%d", doc_id, body.user_id, len(cached))
+        return RelevanceResponse(relevance=cached, cached=True)
+
+    user_profile = None
+    try:
+        u = await db[CollectionName.USERS].find_one({"_id": ObjectId(body.user_id)})
+        if u:
+            user_profile = u.get("parsed_profile") or None
+    except Exception:
+        pass
+
+    title = doc.get("title", "")
+    summary = doc.get("summary", "") or doc.get("raw_text", "")[:800]
+
+    logger.info("DOCS  relevance  doc_id=%s  user_id=%s  cached=False", doc_id, body.user_id)
+    relevance = await trigger_relevance_agent(
+        document_title=title,
+        document_summary=summary,
+        user_profile=user_profile,
+    )
+
+    # Persist to alert so it is never regenerated
+    if alert:
+        await db[CollectionName.ALERTS].update_one(
+            {"user_id": body.user_id, "document_id": doc_id},
+            {"$set": {"why_it_affects_me": relevance}},
+        )
+        logger.info("DOCS  relevance  doc_id=%s  user_id=%s  saved  len=%d", doc_id, body.user_id, len(relevance))
+
+    return RelevanceResponse(relevance=relevance, cached=False)
+
+
+@router.post("/{doc_id}/save-progress")
+async def save_progress(
+    doc_id: str,
+    body: SaveProgressBody,
+    db: DbDep,
+) -> dict:
+    """Persist chat history, draft comment, and draft snapshot length to the alert document.
+
+    Only updates existing alerts (matched documents). No-ops for trending documents
+    where no alert exists.
+    """
+    parse_object_id(doc_id, field="doc_id")  # validate format
+
+    history_dicts = [{"role": m.role, "text": m.text} for m in body.chat_history]
+
+    result = await db[CollectionName.ALERTS].update_one(
+        {"user_id": body.user_id, "document_id": doc_id},
+        {
+            "$set": {
+                "chat_history": history_dicts,
+                "draft_comment": body.draft_comment,
+                "draft_snapshot_length": body.draft_snapshot_length,
+            }
+        },
+    )
+    saved = result.modified_count > 0
+    logger.info(
+        "DOCS  save_progress  doc_id=%s  user_id=%s  history=%d  draft_len=%d  saved=%s",
+        doc_id,
+        body.user_id,
+        len(history_dicts),
+        len(body.draft_comment),
+        saved,
+    )
+    return {"saved": saved}

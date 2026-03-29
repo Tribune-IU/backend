@@ -2,6 +2,7 @@
   "ordinance_2026_06": {
     "url": "",
     "hearing_date": "2026-03-04",
+    "pdf_url": "/City_Council-20260304-Packet.pdf",
     "summary": "This ordinance proposes to rezone a 6.3-acre property in the Hopewell South area from Residential Urban Lot (R4) and Residential Multifamily (RM) to Planned Unit Development (PUD). The goal is to create attainable homeownership opportunities, increase housing density, and implement sustainable urban design principles. The development will include small-lot housing types, reduced setbacks, green infrastructure, and accessible units, aiming to serve young professionals, local workforce, and long-term residents.",
     "source": "Bloomington City Council",
     "title": "To Amend the City of Bloomington Zoning Maps by Rezoning a 6.3 Acre Property from Residential Urban Lot (R4) and Residential Multifamily (RM) within the Transform Redevelopment Overlay (TRO) to Planned Unit Development (PUD) and to Approve a District Ordinance and Preliminary Plan",
@@ -30,6 +31,8 @@
   "resolution_2026_04": {
     "date_filed": "2026-02-27",
     "status": "open_for_comment",
+    "hearing_date": "2026-03-04",
+    "pdf_url": "/City_Council-20260304-Packet.pdf",
     "summary": "This resolution aims to establish transparency, limits, and a public review process for Automated License Plate Reader (ALPR) technology in Bloomington. It expresses opposition to unchecked surveillance, affirms civil liberties, and directs the police department and mayor's office to brief the Common Council on the ALPR program, its operations, and safeguards. It also calls for an immediate pause on any expansion of the ALPR program until the briefing is complete and expresses the Council's intent to develop an ordinance with durable rules for ALPR use.",
     "source": "Bloomington City Council",
     "ai_tags": {
@@ -49,7 +52,6 @@
     },
     "document_id": "Resolution 2026-04",
     "title": "A Resolution Establishing Immediate Transparency, Limits, And A Public Review Process For Automated License Plate Reader Technology In Bloomington",
-    "url": "",
-    "hearing_date": "2026-03-04"
+    "url": ""
   }
 }

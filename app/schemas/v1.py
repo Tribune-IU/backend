@@ -65,6 +65,8 @@ class DocumentDetail(BaseModel):
     source: str
     summary: str = ""
     raw_text: str = ""
+    hearing_date: str = ""
+    pdf_url: str = ""
     ai_tags: TagDict
 
 
@@ -119,8 +121,28 @@ class DraftCommentResponse(BaseModel):
     draft_comment: str
 
 
-class AlertResource(BaseModel):
+class RelevanceBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    user_id: str = Field(..., description="MongoDB ObjectId of the requesting user.")
+
+
+class RelevanceResponse(BaseModel):
+    relevance: str = Field(..., description="<100-word personalised explanation of why this document affects the user.")
+    cached: bool = Field(default=False, description="True when returned from DB cache rather than regenerated.")
+
+
+class SaveProgressBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: str
+    chat_history: list[ChatMessage] = Field(default_factory=list)
+    draft_comment: str = Field(default="")
+    draft_snapshot_length: int = Field(default=0)
+
+
+class AlertResource(BaseModel):
+    model_config = ConfigDict(extra="ignore")
 
     id: str
     user_id: str
@@ -129,6 +151,11 @@ class AlertResource(BaseModel):
     ai_draft_comment: str
     is_active: bool = True
     coalition_count: int = 0
+    # Persisted session state
+    why_it_affects_me: str = ""
+    chat_history: list[dict[str, str]] = Field(default_factory=list)
+    draft_comment: str = ""
+    draft_snapshot_length: int = 0
 
 
 class ListAlertsResponse(BaseModel):
