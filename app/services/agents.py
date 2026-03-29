@@ -20,6 +20,7 @@ async def call_adk_agent_fire_and_forget(app_name: str, message: str) -> None:
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             session_url = f"{ADK_SERVER_URL}/apps/{app_name}/users/{user_id}/sessions"
+            logger.info("ADK   %s  creating session  session=%s", app_name, session_id)
             session_resp = await client.post(session_url, json={"sessionId": session_id})
             session_resp.raise_for_status()
 
@@ -29,11 +30,12 @@ async def call_adk_agent_fire_and_forget(app_name: str, message: str) -> None:
                 "sessionId": session_id,
                 "newMessage": {"role": "user", "parts": [{"text": message}]},
             }
+            logger.info("ADK   %s  POST /run  session=%s  prompt_len=%d", app_name, session_id, len(message))
             response = await client.post(f"{ADK_SERVER_URL}/run", json=payload)
             response.raise_for_status()
-            logger.info("Agent %s completed its run with session %s.", app_name, session_id)
+            logger.info("ADK   %s  /run complete  session=%s", app_name, session_id)
     except Exception as e:
-        logger.error("Failed to call ADK agent %s: %s", app_name, e)
+        logger.error("ADK   %s  failed  session=%s  error=%s", app_name, session_id, e)
         raise ApiError(http_status=500, status="INTERNAL", message=f"Failed to call agent: {e}")
 
 
@@ -53,10 +55,12 @@ async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: flo
 
     async with httpx.AsyncClient(timeout=timeout + 10) as client:
         session_url = f"{ADK_SERVER_URL}/apps/{app_name}/users/{user_id}/sessions"
+        logger.info("ADK   %s  creating session  session=%s", app_name, session_id)
         try:
             sr = await client.post(session_url, json={"sessionId": session_id})
             sr.raise_for_status()
         except Exception as e:
+            logger.error("ADK   %s  session create failed  session=%s  error=%s", app_name, session_id, e)
             raise ApiError(http_status=502, status="UNAVAILABLE", message=f"ADK session error: {e}")
 
         payload = {
@@ -66,6 +70,7 @@ async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: flo
             "newMessage": {"role": "user", "parts": [{"text": message}]},
         }
 
+        logger.info("ADK   %s  POST /run  session=%s  prompt_len=%d  timeout=%.0fs", app_name, session_id, len(message), timeout)
         try:
             resp = await client.post(f"{ADK_SERVER_URL}/run", json=payload, timeout=timeout)
             resp.raise_for_status()
@@ -77,8 +82,10 @@ async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: flo
                 message=f"Agent '{app_name}' did not respond within {timeout:.0f}s.",
             )
         except Exception as e:
+            logger.error("ADK   %s  /run failed  session=%s  error=%s", app_name, session_id, e)
             raise ApiError(http_status=502, status="UNAVAILABLE", message=f"ADK run error: {e}")
 
+    logger.info("ADK   %s  /run returned %d events  session=%s", app_name, len(events), session_id)
     text_parts: list[str] = []
     for event in events:
         content = event.get("content", {})
@@ -88,13 +95,16 @@ async def call_adk_agent_and_get_reply(app_name: str, message: str, timeout: flo
                     text_parts.append(part["text"].strip())
 
     if not text_parts:
+        logger.warning("ADK   %s  no text in reply  session=%s  events=%d", app_name, session_id, len(events))
         raise ApiError(
             http_status=502,
             status="UNAVAILABLE",
             message=f"Agent '{app_name}' returned no text.",
         )
 
-    return "\n\n".join(text_parts)
+    reply = "\n\n".join(text_parts)
+    logger.info("ADK   %s  reply ready  session=%s  reply_len=%d", app_name, session_id, len(reply))
+    return reply
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,9 @@
+import logging
 import uuid
 
 from fastapi import APIRouter
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import DbDep
 from app.api.errors import ApiError
@@ -28,6 +31,7 @@ async def list_documents(db: DbDep) -> ListDocumentsResponse:
     items: list[DocumentListItem] = []
     async for raw in cursor:
         items.append(DocumentListItem.model_validate(mongo_doc_to_response(raw)))
+    logger.info("DOCS  list  count=%d", len(items))
     return ListDocumentsResponse(documents=items)
 
 
@@ -38,6 +42,7 @@ async def get_document(doc_id: str, db: DbDep) -> DocumentDetail:
     doc = await db[CollectionName.DOCUMENTS].find_one({"_id": oid})
     if doc is None:
         raise ApiError(http_status=404, status="NOT_FOUND", message="Document not found.")
+    logger.info("DOCS  get  doc_id=%s  title=%r", doc_id, doc.get("title", "")[:60])
     return DocumentDetail.model_validate(mongo_doc_to_response(doc))
 
 
@@ -65,6 +70,13 @@ async def chat_with_document(
 
     raw_text = doc.get("raw_text") or doc.get("summary") or ""
     context = raw_text[: settings.chat_max_context_chars]
+    logger.info(
+        "DOCS  chat  doc_id=%s  user_id=%s  history=%d turns  question=%r",
+        doc_id,
+        body.user_id or "anon",
+        len(body.history),
+        body.message[:80],
+    )
 
     user_profile = None
     if body.user_id:
@@ -85,7 +97,7 @@ async def chat_with_document(
         history=history_dicts or None,
         user_profile=user_profile,
     )
-
+    logger.info("DOCS  chat  doc_id=%s  session=%s  reply_len=%d  context_chars=%d", doc_id, session_id, len(reply), len(context))
     return ChatResponse(reply=reply, context_chars_used=len(context))
 
 
@@ -106,6 +118,14 @@ async def draft_comment(
 
     summary = doc.get("summary") or doc.get("raw_text", "")[:1_000]
     session_id = str(uuid.uuid4())
+    logger.info(
+        "DOCS  draft  doc_id=%s  session=%s  user_id=%s  history=%d turns  ctx_len=%d",
+        doc_id,
+        session_id,
+        body.user_id or "anon",
+        len(body.history),
+        len(body.resident_context),
+    )
 
     user_profile = None
     if body.user_id:
@@ -126,4 +146,5 @@ async def draft_comment(
         user_profile=user_profile,
     )
 
+    logger.info("DOCS  draft  doc_id=%s  session=%s  draft_len=%d", doc_id, session_id, len(draft))
     return DraftCommentResponse(draft_comment=draft)

@@ -1,5 +1,9 @@
+import logging
+
 from bson import ObjectId
 from fastapi import APIRouter, BackgroundTasks
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import DbDep
 from app.api.errors import ApiError
@@ -23,7 +27,9 @@ async def create_user(body: CreateUserBody, db: DbDep, background_tasks: Backgro
     result = await db[CollectionName.USERS].insert_one(payload)
     user_id = str(result.inserted_id)
 
+    logger.info("USERS create_user  user_id=%s  bio_len=%d", user_id, len(body.bio))
     # 2. Trigger the agent which will call the webhook to save the profile (runs async)
+    logger.info("USERS triggering profile_agent  user_id=%s", user_id)
     background_tasks.add_task(trigger_profile_agent, user_id, body.bio)
 
     # 3. Retrieve the inserted user immediately (profile tags will be empty until agent finishes)
@@ -42,7 +48,9 @@ async def submit_bio(user_id: str, body: SubmitBioBody, db: DbDep, background_ta
     user = await db[CollectionName.USERS].find_one({"_id": oid})
     if user is None:
         raise ApiError(http_status=404, status="NOT_FOUND", message="User not found.")
+    logger.info("USERS submit_bio  user_id=%s  bio_len=%d", user_id, len(body.bio))
     await db[CollectionName.USERS].update_one({"_id": oid}, {"$set": {"bio": body.bio.strip()}})
+    logger.info("USERS triggering profile_agent  user_id=%s", user_id)
     background_tasks.add_task(trigger_profile_agent, user_id, body.bio)
     updated = await db[CollectionName.USERS].find_one({"_id": oid})
     return GetUserResponse(user=UserResource.model_validate(mongo_doc_to_response(updated)))
@@ -65,8 +73,10 @@ async def list_user_alerts(user_id: str, db: DbDep) -> ListAlertsResponse:
     if user is None:
         raise ApiError(http_status=404, status="NOT_FOUND", message="User not found.")
 
+    logger.info("USERS list_alerts  user_id=%s", user_id)
     cursor = db[CollectionName.ALERTS].find({"user_id": user_id, "is_active": True}).sort("_id", -1)
     raw_alerts = [raw async for raw in cursor]
+    logger.info("USERS list_alerts  user_id=%s  count=%d", user_id, len(raw_alerts))
 
     # Batch-fetch documents and compute coalition count once per unique document_id
     unique_doc_ids = {a["document_id"] for a in raw_alerts if "document_id" in a}

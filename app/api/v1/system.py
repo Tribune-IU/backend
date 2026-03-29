@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.db.collections import CollectionName
+
+logger = logging.getLogger(__name__)
 from app.api.validation import parse_object_id
 from app.models.document import DocumentRecord
 
@@ -21,6 +25,7 @@ async def trigger_monitor(db: DbDep) -> TriggerMonitorResponse:
 
 @router.post("/system:saveProfile")
 async def save_profile(body: SaveProfileBody, db: DbDep) -> dict:
+    logger.info("SYSTEM saveProfile  user_id=%s", body.user_id)
     oid = parse_object_id(body.user_id, field="user_id")
     updated_profile = body.profile_data.model_dump()
     await db[CollectionName.USERS].update_one(
@@ -42,6 +47,7 @@ async def save_profile(body: SaveProfileBody, db: DbDep) -> dict:
         # If the user's tags intersect with the document's tags:
         if check_tags_overlap(user_tag_list, doc_tag_list):
             title = doc.get("title", "Unknown Proposal")
+            logger.info("SYSTEM saveProfile  alert generated  user_id=%s  doc_id=%s  title=%r", str(oid), str(doc["_id"]), title[:60])
             await generate_alert_for_user_and_doc(
                 db=db,
                 user_id=str(oid),
@@ -49,7 +55,7 @@ async def save_profile(body: SaveProfileBody, db: DbDep) -> dict:
                 title=title,
                 summary=doc.get("summary", "")
             )
-            
+
     return {"status": "success"}
 
 
@@ -119,6 +125,7 @@ class SaveDraftCommentBody(BaseModel):
 @router.post("/system:saveQaReply")
 async def save_qa_reply(body: SaveQaReplyBody) -> dict:
     """Receive an answer from document_qa_agent and unblock the waiting chat handler."""
+    logger.info("SYSTEM saveQaReply  session=%s  reply_len=%d  preview=%r", body.session_id, len(body.reply), body.reply[:80])
     await qa_reply_store.set(body.session_id, body.reply)
     return {"status": "ok"}
 
@@ -126,6 +133,7 @@ async def save_qa_reply(body: SaveQaReplyBody) -> dict:
 @router.post("/system:saveDraftComment")
 async def save_draft_comment(body: SaveDraftCommentBody) -> dict:
     """Receive a draft letter from draft_comment_agent and unblock the waiting draft handler."""
+    logger.info("SYSTEM saveDraftComment  session=%s  draft_len=%d  preview=%r", body.session_id, len(body.draft_comment), body.draft_comment[:80])
     await draft_comment_store.set(body.session_id, body.draft_comment)
     return {"status": "ok"}
 

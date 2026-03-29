@@ -3,8 +3,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.user import TagDict
 
 
+class AuthBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(..., min_length=1, max_length=128)
+    password: str = Field(default="", description="Accepted for UX; not validated or stored.")
+
+
 class AuthResponse(BaseModel):
     user_id: str
+    username: str
 
 
 class CreateUserBody(BaseModel):
@@ -23,6 +31,7 @@ class UserResource(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str
+    username: str = ""
     bio: str
     parsed_profile: TagDict
 

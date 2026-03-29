@@ -9,6 +9,7 @@ TagDict = dict[str, list[str]]
 class UserDocument(MongoDocumentBase):
     """`users` collection: onboarding bio plus structured tags from profile parsing."""
 
+    username: str = Field(default="", description="Display name from login; stored with the user record.")
     bio: str = Field(default="", description="Plain-language self description from the user.")
     parsed_profile: TagDict = Field(
         default_factory=dict,
