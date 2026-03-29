@@ -22,7 +22,11 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Tribune API — connecting to MongoDB at %s / %s", settings.mongodb_uri, settings.mongodb_db_name)
+    logger.info(
+        "Starting Tribune API — connecting to MongoDB at %s / %s",
+        settings.mongodb_uri,
+        settings.mongodb_db_name,
+    )
     client = AsyncIOMotorClient(settings.mongodb_uri)
     db = client[settings.mongodb_db_name]
     await ensure_indexes(db)
@@ -39,7 +43,11 @@ app = FastAPI(title="Tribune API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://tribune-iu.vercel.app",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -53,7 +61,13 @@ async def log_requests(request: Request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     ms = (time.perf_counter() - start) * 1000
-    logger.info("%-6s %-45s → %d  (%.0f ms)", request.method, request.url.path, response.status_code, ms)
+    logger.info(
+        "%-6s %-45s → %d  (%.0f ms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        ms,
+    )
     return response
 
 
